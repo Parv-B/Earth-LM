@@ -1,0 +1,5 @@
+google-generativeai
+geopy
+numpy
+matplotlib
+sentinelhub
