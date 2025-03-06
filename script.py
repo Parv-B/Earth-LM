@@ -10,15 +10,58 @@ from sentinelhub import (
 import numpy as np
 import matplotlib.pyplot as plt
 
-# API Keys & Config
+# Retrieve predefined password from secrets
 try:
-    gemini_api_key = st.secrets["api_keys"]["gemini_api_key"]
-    sentinelhub_client_id = st.secrets["api_keys"]["sentinelhub_client_id"]
-    sentinelhub_client_secret = st.secrets["api_keys"]["sentinelhub_client_secret"]
+    PREDEFINED_PASSWORD = st.secrets["authentication"]["password"]
 except KeyError:
-    st.error("❌ API keys are missing in `secrets.toml`. Please configure the file.")
+    st.error("❌ Authentication password is missing in `secrets.toml`. Please configure the file.")
     st.stop()
 
+# Sidebar authentication
+st.sidebar.subheader("🔐 Choose Authentication Mode")
+
+auth_mode = st.sidebar.radio(
+    "Select API Key Mode:",
+    ("Use Predefined API Keys (Enter Password)", "Enter My Own API Keys")
+)
+
+if auth_mode == "Use Predefined API Keys (Enter Password)":
+    user_password = st.sidebar.text_input("Enter password:", type="password")
+
+    if user_password and user_password == PREDEFINED_PASSWORD:
+        st.session_state["authenticated"] = True
+        st.sidebar.success("✅ Access granted. Using predefined API keys.")
+    else:
+        st.session_state["authenticated"] = False
+        st.sidebar.warning("⚠️ Enter the correct password to use predefined API keys.")
+
+# Initialize API keys
+gemini_api_key = None
+sentinelhub_client_id = None
+sentinelhub_client_secret = None
+
+# If authenticated, use predefined keys
+if st.session_state.get("authenticated", False):
+    try:
+        gemini_api_key = st.secrets["api_keys"]["gemini_api_key"]
+        sentinelhub_client_id = st.secrets["api_keys"]["sentinelhub_client_id"]
+        sentinelhub_client_secret = st.secrets["api_keys"]["sentinelhub_client_secret"]
+    except KeyError:
+        st.error("❌ API keys are missing in `secrets.toml`. Please configure the file.")
+        st.stop()
+
+# If user selects to enter their own API keys
+elif auth_mode == "Enter My Own API Keys":
+    gemini_api_key = st.sidebar.text_input("Gemini API Key", type="password")
+    sentinelhub_client_id = st.sidebar.text_input("SentinelHub Client ID", type="password")
+    sentinelhub_client_secret = st.sidebar.text_input("SentinelHub Client Secret", type="password")
+
+    # Ensure all required API keys are provided
+    if not gemini_api_key or not sentinelhub_client_id or not sentinelhub_client_secret:
+        st.error("❌ Please enter all required API keys.")
+        st.stop()
+
+# Configure APIs with selected keys
 genai.configure(api_key=gemini_api_key)
 model = genai.GenerativeModel("gemini-2.0-flash")
 
